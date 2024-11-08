@@ -54,4 +54,11 @@ class Book
     {
         return $this->id;
     }
+
+    // This setter is needed for creating test fixtures (by running `bin/console doctrine:fixtures:load`).
+    // I think this is needed while the others don't need it `$publicationDate` has a type of `DateTimeImmutable`.
+    public function setPublicationDate($publicationDate)
+    {
+        $this->publicationDate = $publicationDate;
+    }
 }
