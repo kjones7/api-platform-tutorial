@@ -30,19 +30,19 @@ class BooksTest extends ApiTestCase
         $this->assertJsonContains([
             '@context' => '/contexts/Book',
             '@id' => '/books',
-            '@type' => 'Collection',
-            'totalItems' => 100,
-            'view' => [
+            '@type' => 'hydra:Collection',
+            'hydra:totalItems' => 100,
+            'hydra:view' => [
                 '@id' => '/books?page=1',
-                '@type' => 'PartialCollectionView',
-                'first' => '/books?page=1',
-                'last' => '/books?page=4',
-                'next' => '/books?page=2',
+                '@type' => 'hydra:PartialCollectionView',
+                'hydra:first' => '/books?page=1',
+                'hydra:last' => '/books?page=4',
+                'hydra:next' => '/books?page=2',
             ],
         ]);
 
         // Because test fixtures are automatically loaded between each test, you can assert on them
-        $this->assertCount(30, $response->toArray()['member']);
+        $this->assertCount(30, $response->toArray()['hydra:member']);
 
         // Asserts that the returned JSON is validated by the JSON Schema generated for this resource by API Platform
         // This generated JSON Schema is also used in the OpenAPI spec!
@@ -51,13 +51,19 @@ class BooksTest extends ApiTestCase
 
     public function testCreateBook(): void
     {
-        $response = static::createClient()->request('POST', '/books', ['json' => [
-            'isbn' => '0099740915',
-            'title' => 'The Handmaid\'s Tale',
-            'description' => 'Brilliantly conceived and executed, this powerful evocation of twenty-first century America gives full rein to Margaret Atwood\'s devastating irony, wit and astute perception.',
-            'author' => 'Margaret Atwood',
-            'publicationDate' => '1985-07-31T00:00:00+00:00',
-        ]]);
+        $response = static::createClient()->request('POST', '/books', [
+            'headers' => [
+                'Content-Type' => 'application/ld+json',
+                'Accept' => 'application/ld+json',
+            ],
+            'json' => [
+                'isbn' => '0099740915',
+                'title' => 'The Handmaid\'s Tale',
+                'description' => 'Brilliantly conceived and executed, this powerful evocation of twenty-first century America gives full rein to Margaret Atwood\'s devastating irony, wit and astute perception.',
+                'author' => 'Margaret Atwood',
+                'publicationDate' => '1985-07-31T00:00:00+00:00',
+            ]
+        ]);
 
         $this->assertResponseStatusCodeSame(201);
         $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
@@ -77,22 +83,29 @@ class BooksTest extends ApiTestCase
 
     public function testCreateInvalidBook(): void
     {
-        static::createClient()->request('POST', '/books', ['json' => [
-            'isbn' => 'invalid',
-        ]]);
+        static::createClient()->request('POST', '/books', [
+            'headers' => [
+                'Content-Type' => 'application/ld+json',
+                'Accept' => 'application/ld+json',
+            ],
+            'json' => [
+                'isbn' => 'invalid',
+            ]
+        ]);
 
         $this->assertResponseStatusCodeSame(422);
-        $this->assertResponseHeaderSame('content-type', 'application/ld+json; charset=utf-8');
+        $this->assertResponseHeaderSame('content-type', 'application/problem+json; charset=utf-8');
 
         $this->assertJsonContains([
-            '@context' => '/contexts/ConstraintViolationList',
             '@type' => 'ConstraintViolationList',
-            'title' => 'An error occurred',
-            'description' => 'isbn: This value is neither a valid ISBN-10 nor a valid ISBN-13.
-title: This value should not be blank.
-description: This value should not be blank.
-author: This value should not be blank.
-publicationDate: This value should not be null.',
+            'hydra:title' => 'An error occurred',
+            'hydra:description' => implode("\n", [
+                'isbn: This value is neither a valid ISBN-10 nor a valid ISBN-13.',
+                'title: This value should not be blank.',
+                'description: This value should not be blank.',
+                'author: This value should not be blank.',
+                'publicationDate: This value should not be null.',
+            ]),
         ]);
     }
 
